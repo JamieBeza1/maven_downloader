@@ -4,7 +4,6 @@ import requests
 import os
 from io import BytesIO
 import csv
-from pprint import pprint
 
 
 def setup_working_directory():
@@ -20,15 +19,31 @@ def setup_working_directory():
 
     return working_dir
 
-def check_if_is_file():
-    
+def check_if_is_file(filename):
+    default_file = 'package.txt'
+    if filename is None:
+        if os.path.isfile(default_file):
+            print(f"Running recursive download from default file: {default_file}")
+            run_from_file(default_file)
+        else:
+            print(f"Unable to find default file: {default_file}")
+    elif filename.endswith(".txt") and os.path.isfile(filename):
+        print(f"Running recursive download from specified file: {filename}")
+        run_from_file(filename)
+    else:
+        print(f"Unable to locate file: {filename}")
+
+def run_from_file(filename):
+    with open(filename) as file:
+        for line in file:
+            print(line)
 
 def get_pkg_details():
     base = 'https://api.deps.dev/v3alpha/systems/maven/packages/'
     maven_base = "https://repo1.maven.org/maven2"
     versions = '/versions/'
     dependencies_str = ':dependencies'
-    package_name = input("Please enter the Maven package you want to download or enter the location of a file containing all the packages: ")
+    package_name = input("Please enter the Maven package you want to download or enter the location of a file containing all the packages (Defualt packages.txt) : ")
     package_version = input("Please enter the Package version here: ")
     #pkg_name = base + package_name + versions + package_version
     return package_name, package_version, base + package_name + versions + package_version, {}, {}, setup_working_directory(), base, maven_base
