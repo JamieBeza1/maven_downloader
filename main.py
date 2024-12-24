@@ -19,8 +19,11 @@ def setup_working_directory():
 
     return working_dir
 
-def check_if_is_file(filename):
+
+def check_if_is_file():
     default_file = 'package.txt'
+    filename = input("Please enter the Maven package you want to download or enter the location of a file containing all the packages (Defualt packages.txt) : ")
+
     if filename is None:
         if os.path.isfile(default_file):
             print(f"Running recursive download from default file: {default_file}")
@@ -30,23 +33,41 @@ def check_if_is_file(filename):
     elif filename.endswith(".txt") and os.path.isfile(filename):
         print(f"Running recursive download from specified file: {filename}")
         run_from_file(filename)
+    elif not filename.endswith(".txt") and filename is not None:
+        run(filename)
     else:
         print(f"Unable to locate file: {filename}")
+
+
+def run(line):
+    pkg_details = get_pkg_details(line)
+    maven = Package(*pkg_details)
+    maven.main()
 
 def run_from_file(filename):
     with open(filename) as file:
         for line in file:
-            print(line)
+            line = line.strip()
+            if line:
+                try:
+                    run(line)
+                except Exception as e:
+                    print(f"Error processing package {line}: {e}")
+                    continue
 
-def get_pkg_details():
+
+def get_pkg_details(filename):
     base = 'https://api.deps.dev/v3alpha/systems/maven/packages/'
     maven_base = "https://repo1.maven.org/maven2"
     versions = '/versions/'
     dependencies_str = ':dependencies'
-    package_name = input("Please enter the Maven package you want to download or enter the location of a file containing all the packages (Defualt packages.txt) : ")
-    package_version = input("Please enter the Package version here: ")
+    #pkg = input("Please enter the Maven package you want to download or enter the location of a file containing all the packages (Defualt packages.txt) : ")
+    #package_version = input("Please enter the Package version here: ")
     #pkg_name = base + package_name + versions + package_version
-    return package_name, package_version, base + package_name + versions + package_version, {}, {}, setup_working_directory(), base, maven_base
+    package_name = filename.split("@v", 1)
+
+    return package_name[0], package_name[-1], base + package_name[0] + versions + package_name[-1], {}, {}, setup_working_directory(), base, maven_base
+
 
 class Package:
 
@@ -75,7 +96,7 @@ class Package:
         try:
             json_data = self.call_api(self.pkg_url+':dependencies')
             data = json.loads(json_data)
-
+            print(data)
             try:
                 for node in data['nodes']:
                     dep_name = node['versionKey']['name']
@@ -83,6 +104,7 @@ class Package:
                     self.dependencies[dep_name] = {'version': dep_version, 'advisories': self.populate_advisories(dep_name, dep_version)}
             except:
                 print(f"Error checking dependency {dep_name}")
+                print(self.pkg_url)
 
 
         except:
@@ -211,14 +233,15 @@ class Package:
             print("Vulnerability Report Created @vulnerability_report.csv")
 
     def main(self):
-        maven.populate_dependencies()
-        maven.print_object()
-        maven.download_jars_poms()
-        maven.get_cve_details()
-        maven.write_report()
+        self.populate_dependencies()
+        self.print_object()
+        self.download_jars_poms()
+        self.get_cve_details()
+        self.write_report()
 
 
 if __name__ == '__main__':
-    pkg_details = get_pkg_details()
-    maven = Package(*pkg_details)
-    maven.main()
+    check_if_is_file()
+    #pkg_details = get_pkg_details(filename="ewe")
+    #maven = Package(*pkg_details)
+    #maven.main()
