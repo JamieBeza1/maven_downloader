@@ -1,9 +1,13 @@
 import json
+from os import write
+
 import pycurl
 import requests
 import os
 from io import BytesIO
 import csv
+
+from urllib3.filepost import writer
 
 
 def setup_working_directory():
@@ -21,10 +25,10 @@ def setup_working_directory():
 
 
 def check_if_is_file():
-    default_file = 'package.txt'
-    filename = input("Please enter the Maven package you want to download or enter the location of a file containing all the packages (Defualt packages.txt) : ")
+    default_file = 'packages.txt'
+    filename = input("Please enter the package you want to download or enter the location of a .txt file (Defualt packages.txt): ")
 
-    if filename is None:
+    if filename == '':
         if os.path.isfile(default_file):
             print(f"Running recursive download from default file: {default_file}")
             run_from_file(default_file)
@@ -68,6 +72,8 @@ def get_pkg_details(filename):
 
     return package_name[0], package_name[-1], base + package_name[0] + versions + package_name[-1], {}, {}, setup_working_directory(), base, maven_base
 
+def create_vuln_doc():
+    pass
 
 class Package:
 
@@ -225,12 +231,30 @@ class Package:
         return data
 
     def write_report(self):
-        with open('vulnerability_report.csv', 'w', newline='') as csvfile:
-            fieldnames = ['CVE Number', 'Package Name', 'Version', 'Title', 'CVSS Score', 'CVSS Vector']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(self.get_cve_details())
-            print("Vulnerability Report Created @vulnerability_report.csv")
+        fname = 'vulnerability_report.csv'
+        fieldnames = ['CVE Number', 'Package Name', 'Version', 'Title', 'CVSS Score', 'CVSS Vector']
+
+        # Check if the file exists
+        does_file_exist = os.path.isfile(fname)
+
+        # Get CVE details (this will be an empty list if no vulnerabilities found)
+        cve_details = self.get_cve_details()
+
+        # Only proceed if there are valid CVE details to write (non-empty data)
+        if cve_details:
+            with open(fname, 'a', newline='') as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                # Write the header only if the file doesn't exist (i.e., first run)
+                if not does_file_exist:
+                    writer.writeheader()
+
+                # Write CVE rows
+                writer.writerows(cve_details)
+
+            print(f"Vulnerability Report Created @ {fname}")
+        else:
+            print("No CVE details to write. Report not updated.")
 
     def main(self):
         self.populate_dependencies()
